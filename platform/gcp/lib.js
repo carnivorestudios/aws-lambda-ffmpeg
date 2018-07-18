@@ -63,6 +63,19 @@ export function uploadToBucket(bucket, key, fileStream, contentEncoding, content
 	return new Promise((resolve, reject) =>
 		fileStream.pipe(writeStream)
 			.on('error', reject)
-			.on('finish', resolve)
+			.on('finish', () => {
+				gcs
+				.bucket(bucket)
+				.file(key)
+				.makePublic()
+				.then(() => {
+					console.log(`gs://${bucket}/${key} is now public.`);
+					resolve()
+				})
+				.catch(err => {
+					console.error('ERROR:', err);
+					reject(err)
+				});
+			})
 	);
 }

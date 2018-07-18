@@ -1,19 +1,15 @@
 {
 	"videoMaxWidth": 320,
 	"videoMaxDuration": 60,
-	"functionBucket": "function-bucket",
-	"sourceBucket": "source-bucket",
-	"destinationBucket": "destination-bucket",
-	"linkPrefix": "http://my.site/",
-	"gzip": false,
+	"functionBucket": "chq-stage-funcs",
+	"sourceBucket": "clanhq-stage.appspot.com",
+	"destinationBucket": "clanhq-stage.appspot.com",
+	"linkPrefix": "http://chq-stage.app.com/",
+	"gzip": true,
 	"format": {
 		"image": {
 			"extension": "png",
 			"mimeType": "image/png"
-		},
-		"video": {
-			"extension": "mp4",
-			"mimeType": "video/mp4"
 		}
 	}
 }

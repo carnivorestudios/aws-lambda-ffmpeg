@@ -1,5 +1,5 @@
-import {inspect} from 'util';
-import {main} from '../common.js';
+import { inspect } from 'util';
+import { main } from '../common.js';
 import * as lib from './lib.js';
 
 /**
@@ -8,18 +8,13 @@ import * as lib from './lib.js';
  * @param {Object} context - The event context
  * @param {Object} data - The event data
  */
-export function entryPoint(context, data) {
-	console.log(`Reading options from data:\n${inspect(data, {depth: 5})}`);
+export function entryPoint(event, cb) {
+	console.log(`Reading options from data:\n${inspect(event, {depth: 5})}`);
 
 	main(lib, console, {
-		event: data,
-		context: context,
+		event: event.data,
+		context: event.context,
 		// Shim
-		callback: (error, result) => {
-			if (error)
-				context.failure(error);
-			else
-				context.success(result);
-		}
+		callback: cb
 	});
 }

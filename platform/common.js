@@ -2,12 +2,12 @@
 
 process.env['NODE_ENV'] = 'production';
 
-import {spawn, execFile} from 'child_process';
-import {unlink, createReadStream, createWriteStream, readdirSync, existsSync, mkdirSync} from 'fs';
-import {createGzip, Z_BEST_COMPRESSION} from 'zlib';
-import {join} from 'path';
-import {tmpdir} from 'os';
-import {checkM3u} from './lib';
+import { execFile, spawn } from 'child_process';
+import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync, unlink } from 'fs';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { createGzip, Z_BEST_COMPRESSION } from 'zlib';
+import { checkM3u } from './lib';
 
 /** @type string **/
 const tempDir = process.env['TEMP'] || tmpdir();
@@ -28,16 +28,16 @@ if (!existsSync(outputDir))
 	mkdirSync(outputDir);
 
 const {
-	DESTINATION_BUCKET,
-	FFMPEG_ARGS,
 	USE_GZIP,
 	MIME_TYPES,
 	VIDEO_MAX_DURATION,
 } = process.env;
 
-const mimeTypes = JSON.parse(MIME_TYPES);
+const FFMPEG_ARGS = '-ss 00:00:1.000 -vframes 1 out.jpg'
+const DESTINATION_BUCKET = 'clanhq-stage.appspot.com'
+const mimeTypes = {"jpg":"image/jpg","mp4":"video/mp4"};
 const useGzip = USE_GZIP === 'true';
-const videoMaxDuration = +VIDEO_MAX_DURATION;
+const videoMaxDuration = 5000;
 
 /**
  * Downloads the file to the local temp directory
@@ -95,7 +95,7 @@ function ffprobe() {
 				reject('FFprobe: no valid video stream found');
 			else {
 				log('Valid video stream found. FFprobe finished.');
-				resolve();
+				resolve();  
 			}
 		};
 
@@ -119,8 +119,8 @@ function ffmpeg(keyPrefix) {
 			'-loglevel', 'warning',
 			'-i', '../download',
 			...FFMPEG_ARGS
-				.replace('$KEY_PREFIX', keyPrefix)
-				.split(' ')
+			.replace('$KEY_PREFIX', keyPrefix)
+			.split(' ')
 		];
 		const opts = {
 			cwd: outputDir
@@ -195,7 +195,7 @@ async function uploadFile(keyPrefix, filename) {
 
 	const fileStream = await encode(fileFullPath, useGzip, rmFiles);
 
-	log(`Uploading ${mimeType}`);
+	log(`Uploading ${keyPrefix}.${extension}`);
 
 	await uploadFunc(
 		DESTINATION_BUCKET,
@@ -220,10 +220,13 @@ async function uploadFile(keyPrefix, filename) {
  */
 
 function uploadFiles(keyPrefix) {
-	return Promise.all(
-		readdirSync(outputDir)
-			.map(filename => uploadFile(keyPrefix, filename))
-	);
+	log(`Beginning Upload ${keyPrefix}`);
+	log(`Beginning Upload ${outputDir}`);
+	return readdirSync(outputDir)
+	.map(filename => {
+		console.log(`Found: ${outputDir}`); 
+		uploadFile(keyPrefix, filename)
+	})
 }
 
 /**
@@ -244,7 +247,17 @@ export async function main(library, logger, invocation) {
 	downloadFunc = library.getDownloadStream;
 	uploadFunc = library.uploadToBucket;
 
+	log(`Invoction: ${invocation.event}`);
+
 	const sourceLocation = library.getFileLocation(invocation.event);
+
+	const parts = sourceLocation.key.split('.')
+	const extension = parts[parts.length - 1]
+	if (extension !== 'mp4') {
+		invocation.callback(null)
+		return
+	}
+
 	const keyPrefix = sourceLocation.key.replace(/\.[^/.]+$/, '');
 
 	let error = null;
@@ -254,9 +267,9 @@ export async function main(library, logger, invocation) {
 		await checkM3u(download);
 		await ffprobe();
 		await ffmpeg(keyPrefix);
+		uploadFiles(keyPrefix);
 		await Promise.all([
 			removeFile(download),
-			uploadFiles(keyPrefix)
 		]);
 	} catch (e) {
 		error = e;
