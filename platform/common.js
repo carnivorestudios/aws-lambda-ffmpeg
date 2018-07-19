@@ -219,14 +219,16 @@ async function uploadFile(keyPrefix, filename) {
  * @returns {Promise}
  */
 
-function uploadFiles(keyPrefix) {
+async function uploadFiles(keyPrefix) {
 	log(`Beginning Upload ${keyPrefix}`);
 	log(`Beginning Upload ${outputDir}`);
-	return readdirSync(outputDir)
-	.map(filename => {
-		console.log(`Found: ${outputDir}`); 
-		uploadFile(keyPrefix, filename)
-	})
+	const files = readdirSync(outputDir)
+	for (const i = 0; i < files.length; i++) {
+		const filename = files[i]
+		console.log(`Found: ${filename}`); 
+		await uploadFile(keyPrefix, filename)
+	}
+	log(`Done uploading`);
 }
 
 /**
@@ -267,10 +269,8 @@ export async function main(library, logger, invocation) {
 		await checkM3u(download);
 		await ffprobe();
 		await ffmpeg(keyPrefix);
-		uploadFiles(keyPrefix);
-		await Promise.all([
-			removeFile(download),
-		]);
+		await uploadFiles(keyPrefix);
+		await removeFile(download);
 	} catch (e) {
 		error = e;
 	}
